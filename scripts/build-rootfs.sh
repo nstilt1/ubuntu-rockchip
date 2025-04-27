@@ -67,6 +67,15 @@ export ARCH=arm64
 export IMAGEFORMAT=none
 export IMAGE_TARGETS=none
 
+# Attempt to preempt the germinate "no Sources files found" error
+# by creating a dummy empty Sources file where it might look.
+# This assumes germinate/lb config uses a temporary cache or structure
+# related to the target mirror and component. The exact path might
+# need tweaking if this doesn't work, but let's try a common pattern.
+#echo "Creating dummy Sources file to potentially work around germinate bug..."
+#mkdir -p cache/repo.ports.ubuntu.com_ubuntu-ports_dists_noble_main_source/
+#touch cache/repo.ports.ubuntu.com_ubuntu-ports_dists_noble_main_source/Sources
+
 # Populate the configuration directory for live build
 lb config \
     --architecture arm64 \
@@ -84,6 +93,19 @@ lb config \
     --parent-mirror-binary "http://ports.ubuntu.com" \
     --keyring-packages ubuntu-keyring \
     --linux-flavours "${KERNEL_FLAVOR}"
+
+LB_CONFIG_EXIT_CODE=$?
+if [ $LB_CONFIG_EXIT_CODE -ne 0 ]; then
+    echo "Error: lb config failed with exit code $LB_CONFIG_EXIT_CODE"
+fi
+
+# Try removing the list associated with platform seed
+#
+# Try removing list files corresponding to the missing seeds
+#rm -f config/package-lists/build-essential.list.chroot
+#rm -f config/package-lists/raspi-common.list.chroot
+#rm -f config/package-lists/raspi.list.chroot # just in case
+#rm -f config/package-lists/language-packs.list.chroot
 
 if [ "${SUITE}" == "noble" ] || [ "${SUITE}" == "jammy" ]; then
     # Pin rockchip package archives
@@ -135,6 +157,12 @@ else
     # Specific packages to install for ubuntu server
     echo "ubuntu-server-rockchip" >> config/package-lists/my.list.chroot
 fi
+
+# Try removing list files corresponding to the missing seeds
+#rm -f config/package-lists/build-essential.list.chroot
+#rm -f config/package-lists/raspi-common.list.chroot
+#rm -f config/package-lists/raspi.list.chroot # just in case
+#rm -f config/package-lists/language-packs.list.chroot
 
 # Build the rootfs
 lb build
